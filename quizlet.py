@@ -62,6 +62,7 @@ def get_all_terms_given_set(set):
 
 	return response.text
 
+
 # def add_to_difficult(term_defn_to_add, username=USERNAME):
 # 	get_url = BASE_URL + 'users/' + username + '/sets'
 

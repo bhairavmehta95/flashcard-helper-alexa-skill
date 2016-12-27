@@ -3,3 +3,4 @@ keys/*
 *.pyc
 */*.pyc
 !keys/README
+*.zip

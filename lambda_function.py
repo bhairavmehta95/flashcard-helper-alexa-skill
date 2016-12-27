@@ -28,6 +28,7 @@ def launch_request_handler(request):
 def session_ended_request_handler(request):
 	return alexa.create_response(message="Goodbye!", end_session=True)
 
+<<<<<<< HEAD
 # List all the sets you own and can study from
 @alexa.request("ListAllSetsIntent")
 def list_all_sets_request_handler(request):
@@ -70,6 +71,8 @@ def review_all_wrong_answers_intent(request):
 
 # 	return alexa.create_response(message="Got it, added to your difficult list. Let's try to define it now. Please define Please define {}".format(all_terms[current_index]['term']))
 
+=======
+>>>>>>> dfc6f81b137a15ada804d294940c65fa13259ca2
 
 # utterance = "Alexa, quiz me on {title}"
 @alexa.intent("StartStudySessionIntent")
@@ -153,6 +156,7 @@ def confirmation_intent_handler(request):
 @alexa.intent('AnswerIntent')
 def answer_intent_handler(request):
 	if request.session['study_session_started'] and not request.session['reviewing_wrong']:
+
 		# TODO: Make so that it does not need to match exactly
 		answer = request.slots["answer"]
 
@@ -201,11 +205,9 @@ def answer_intent_handler(request):
 
 			if request.session['correct_count'] + request.session['incorrect_count']  == total_terms:
 				total_percent_correct = int((float(request.session['correct_count']) / total_terms) * 100)
-				incorrect_terms_list = [x[1] for x in request.session['incorrect_terms']]
-				incorrect_terms_string = ", ".join(incorrect_terms_list)
+				incorrect_terms_string = ", ".join(request.session['incorrect_terms'])
 
-				final_message = "Uh Oh, you got that one wrong! Goodbye! Thanks for finishing! You got {} correct and {} incorrect out of {} total terms. \
-				You got {} percent correct, and you might want to study up on {}".format(request.session['correct_count'], \
+				final_message = "Uh Oh, you got that one wrong! Goodbye! Thanks for finishing! You got {} correct and {} incorrect out of {} total terms. You got {} percent correct, and you might want to study up on {}".format(request.session['correct_count'], \
 				request.session['incorrect_count'], total_terms, total_percent_correct, incorrect_terms_string)
 				
 				return alexa.create_response(message=final_message, end_session=True)
@@ -224,6 +226,7 @@ def answer_intent_handler(request):
 			message = "Uh oh, you didn't get that one right! The correct answer was {}. Now, please define {}".format(correct_def, request.session['all_terms'][index]['term'])
 
 			return alexa.create_response(message=message)
+
 
 	elif request.session['study_session_started'] and request.session['reviewing_wrong']:
 		incorrect_index = request.session['reviewing_index']
@@ -246,6 +249,7 @@ def answer_intent_handler(request):
 			incorrect_index = incorrect_index % len(request.session['incorrect_terms'])
 
 			alexa_response_str = "Oops, still not right. We'll come back to that. Now, can you define {}?".format(request.session['incorrect_terms'][incorrect_index][1])			
+
 
 
 if __name__ == "__main__":	
