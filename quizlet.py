@@ -62,6 +62,39 @@ def get_all_terms_given_set(set):
 
 	return response.text
 
+# def add_to_difficult(term_defn_to_add, username=USERNAME):
+# 	get_url = BASE_URL + 'users/' + username + '/sets'
+
+# 	parameters = {
+# 		'client_id' : keys.CLIENT_ID,
+# 	}
+
+# 	result = requests.get(url, params = parameters)
+
+# 	sets = json.loads(result.text)
+
+# 	difficult_set_exists = False
+# 	difficult_set_id = None
+
+# 	for s in sets:
+# 		if s['title'] == "Difficult Words":
+# 			difficult_set_exists = True
+# 			difficult_set_id = s['id']
+# 			break
+
+
+# 	term = term_defn_to_add['term']
+# 	term_id = term_defn_to_add['id']
+# 	defn = term_defn_to_add['definition']
+
+# 	if difficult_set_exists:
+# 		post_url = "https://api.quizlet.com/2.0/sets/{}/terms".format(difficult_set_id)
+		
+
+
+
+# 	response = requests.post
+
 
 if __name__ == '__main__':
 	get_all_sets_from_user()
