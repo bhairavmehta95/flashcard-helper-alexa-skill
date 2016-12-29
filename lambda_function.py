@@ -196,7 +196,7 @@ def confirmation_intent_handler(request):
 # Answers to a term
 '''
 
-Currently, the utterances and speech model support answers of 1-5 words, as most flash cards definitions are
+Currently, the utterances and speech model support answers of 1-8 words, as most flash cards definitions are
 within this limit.
 
 The answer to questions needs to be preceded by "the answer is ..." or the "the definition is ..."
@@ -233,7 +233,7 @@ def answer_intent_handler(request):
 					incorrect_terms_string = ", ".join(incorrect_terms_list)
 				
 
-				alexa_response_str = "Good job, you got that one right! Goodbye! Thanks for finishing! You got {} correct and {} incorrect out of {} \
+				alexa_response_str = "Good job, you got that one right! Thanks for finishing! You got {} correct and {} incorrect out of {} \
 				total terms. You got {} percent correct, and you might want to study up on {}. Let me know if you want to brush up on your \
 				troublesome terms, or end the session for now!".format(request.session['correct_count'], \
 				request.session['incorrect_count'], total_terms, total_percent_correct, incorrect_terms_string)
@@ -273,7 +273,7 @@ def answer_intent_handler(request):
 				# loads all of the incorrect terms into a string
 				incorrect_terms_string = ", ".join(request.session['incorrect_terms'])
 
-				alexa_response_str = "Uh Oh, you got that one wrong! Goodbye! Thanks for finishing! You got {} correct and {} \
+				alexa_response_str = "Uh Oh, you got that one wrong! Thanks for finishing! You got {} correct and {} \
 				incorrect out of {} total terms. You got {} percent correct, and you might want to study up on {}. Let me know if you want to brush up on your \
 				troublesome terms, or end the session for now!" \
 				.format(request.session['correct_count'], request.session['incorrect_count'], total_terms, total_percent_correct, incorrect_terms_string)
@@ -316,17 +316,24 @@ def answer_intent_handler(request):
 		if str(answer).lower() == str(request.session['all_terms'][index]['definition']).lower():
 			
 			# pops that term of the incorrect terms -- doesn't increment index 
-			request.session['incorrect_terms'].pop(index)
+			request.session['incorrect_terms'].pop(incorrect_index)
 
 			# user is not done with all of the incorrect terms
 			if request.session['incorrect_terms'] != []:
-				alexa_response_str = "Congratulations, you got that right! Now, can you define {}?".format(request.session['incorrect_terms'][incorrect_index][1])
+				# checks if the term was the last term in the list
+				try:
+					alexa_response_str = "Congratulations, you got that right! Now, can you define {}?".format(request.session['incorrect_terms'][incorrect_index][1])
+				except:
+					incorrect_index = 0
+					request.session['reviewing_index'] = 0
+					alexa_response_str = "Congratulations, you got that right! Now, can you define {}?".format(request.session['incorrect_terms'][incorrect_index][1])
+
 				return alexa.create_response(message=alexa_response_str)
 
 			# user has finished reviewing all of the incorrect terms
 			else:
 				alexa_response_str = "Congratulations, you finished reviewing the incorrect words from this session. Thanks for studying!"
-				return alexa.create_response(message=alexa_response_str)
+				return alexa.create_response(message=alexa_response_str, end_session=True)
 		
 		# user did not get the correct answer
 		else:
