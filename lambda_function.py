@@ -10,6 +10,7 @@ import quizlet
 import json
 from random import randint
 
+
 ###### HANDLERS ######
 
 # Lambda Handler function
@@ -19,7 +20,8 @@ def lambda_handler(request_obj, context=None):
 # Default Handler
 @alexa.default
 def default_handler(request):
-	return alexa.create_response("Welcome! Let's start studying! For more help, look at my documentation.")
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code."
+	return alexa.create_response(message=alexa_response_str)
 
 ###### END HANDLERS ######
 
@@ -28,21 +30,42 @@ def default_handler(request):
 # Launch the App
 @alexa.request("LaunchRequest")
 def launch_request_handler(request):
-	return alexa.create_response("Welcome! Let's start studying!")
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code."
+	return alexa.create_response(message=alexa_response_str)
 
 # End the session
 @alexa.request("SessionEndedRequest")
 def session_ended_request_handler(request):
-	return alexa.create_response(message="Goodbye!", end_session=True)
+	alexa_response_str = "Goodbye!"
+	return alexa.create_response(message=alexa_response_str, end_session=True)
 
 ###### END REQUESTS ######
 
 
 ###### INTENTS ######
 
+@alexa.intent('PinCodeIntent')
+def pin_code_confirm_intent_hander(request):
+	pin = request.slots['pin_code']
+	username = quizlet.verify_user(pin)
+
+	if username != None:
+		request.session['username'] = username
+		request.session['pin_code_verified'] = True
+		alexa_response_str = "Welcome to Flashcard Helper {}".format(username)
+		return alexa.create_response(message=alexa_response_str)
+
+	else:
+		alexa_response_str = "The pin I heard was {} and I couldn't find a username. Please try again.".format(pin)
+		return alexa.create_response(message=alexa_response_str)
+
 # List all the sets you own and can study from
 @alexa.intent("ListAllSetsIntent")
-def list_all_sets_request_handler(request):
+def list_all_sets_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+
 	# get all of the sets
 	user_id = request.session['username']
 	sets = quizlet.get_all_sets_from_user(user_id)
@@ -64,7 +87,11 @@ def list_all_sets_request_handler(request):
 
 # Review all of the wrong answers a user had during a session
 @alexa.intent("ReviewWrongAnswersIntent")
-def review_all_wrong_answers_intent(request):
+def review_all_wrong_answers_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+		
 	if request.session['incorrect_terms'] != []:
 		request.session['reviewing_wrong'] = True
 		request.session['reviewing_index'] = 0
@@ -78,7 +105,12 @@ def review_all_wrong_answers_intent(request):
 
 # Starts a study session when given a set title
 @alexa.intent("StartStudySessionIntent")
-def start_study_session_request_handler(request):
+def start_study_session_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+
+	user_id = request.session['username']
 
 	# clears any old session data
 	try:
@@ -86,8 +118,11 @@ def start_study_session_request_handler(request):
 	except:
 		pass
 
+	# resets so user doesn't have to relog in
+	request.session['username'] = user_id
+	request.session['pin_code_verified'] = True
+	
 	# get all of the sets
-	user_id = request.session['username']
 	sets = quizlet.get_all_sets_from_user(user_id)
 	all_sets_titles = []
 	
@@ -123,6 +158,10 @@ def start_study_session_request_handler(request):
 # Ends the study session, gives user statistics for session
 @alexa.intent("EndStudySessionIntent")
 def end_study_session_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+		
 	total_percent_correct = int((float(request.session['correct_count']) / request.session['total_terms']) * 100)
 
 	alexa_response_str = "I am sorry you want to leave. During this session, you got {} correct and {} incorrect out of {} \
@@ -134,6 +173,10 @@ def end_study_session_intent_handler(request):
 # Confirms that this is the set the user wanted to study
 @alexa.intent("ConfirmationIntent")
 def confirmation_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+		
 	# store that the session has been started
 	request.session['study_session_started'] = True
 	request.session.pop('awaiting_set_id_confirmation')
@@ -206,6 +249,10 @@ The answer to questions needs to be preceded by "the answer is ..." or the "the 
 '''
 @alexa.intent('AnswerIntent')
 def answer_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first."
+		return alexa.create_response(message=alexa_response_str)
+		
 	# makes sure a study session has started and user is not reviewing his/her wrong answers
 	if request.session['study_session_started'] and not request.session['reviewing_wrong']:
 

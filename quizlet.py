@@ -2,6 +2,8 @@ import keys as keys
 import requests
 import json
 from random import randint
+from config import SQLALCHEMY_DATABASE_URI
+from sqlalchemy import create_engine
 
 BASE_URL = 'https://api.quizlet.com/2.0/'
 
@@ -55,6 +57,23 @@ def get_all_terms_given_set(set):
 
 	return response.text
 
+# given a pin code, returns a username to be used with alexa
+
+def verify_user(pin):
+	engine = create_engine(SQLALCHEMY_DATABASE_URI)
+	connection = engine.connect()
+	pin = str(pin)
+	result = connection.execute('SELECT quizlet_username FROM flashcard_users WHERE pin_code = "{}" LIMIT 1'.format(pin))
+	username = None
+	for row in result:
+		username = row['quizlet_username']
+
+	connection.close()
+
+	return username
+
+
+
 
 # def add_to_difficult(term_defn_to_add, username=USERNAME):
 # 	get_url = BASE_URL + 'users/' + username + '/sets'
@@ -86,16 +105,16 @@ def get_all_terms_given_set(set):
 		
 
 if __name__ == '__main__':
-	sets = get_all_sets_from_user()
-	all_sets_titles = []
+	# sets = get_all_sets_from_user()
+	# all_sets_titles = []
 
-	set_id = None
-	set_title = None
+	# set_id = None
+	# set_title = None
 
-	# add each title to the list
-	for set_ in sets:
-		all_sets_titles.append(set_['title'])
+	# # add each title to the list
+	# for set_ in sets:
+	# 	all_sets_titles.append(set_['title'])
 
-	all_sets_string = ", ".join(all_sets_titles)
-	print("Here are the sets you can choose from: {}".format(all_sets_string))
-
+	# all_sets_string = ", ".join(all_sets_titles)
+	# print("Here are the sets you can choose from: {}".format(all_sets_string))
+	print verify_user(57860)
