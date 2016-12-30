@@ -44,7 +44,8 @@ def session_ended_request_handler(request):
 @alexa.intent("ListAllSetsIntent")
 def list_all_sets_request_handler(request):
 	# get all of the sets
-	sets = quizlet.get_all_sets_from_user()
+	user_id = request.session['username']
+	sets = quizlet.get_all_sets_from_user(user_id)
 	all_sets_titles = []
 
 	set_id = None
@@ -86,7 +87,8 @@ def start_study_session_request_handler(request):
 		pass
 
 	# get all of the sets
-	sets = quizlet.get_all_sets_from_user()
+	user_id = request.session['username']
+	sets = quizlet.get_all_sets_from_user(user_id)
 	all_sets_titles = []
 	
 	# grabs the title of the set from the slot
