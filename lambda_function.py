@@ -20,7 +20,7 @@ def lambda_handler(request_obj, context=None):
 # Default Handler
 @alexa.default
 def default_handler(request):
-	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code."
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app."
 	return alexa.create_response(message=alexa_response_str)
 
 ###### END HANDLERS ######
@@ -30,7 +30,7 @@ def default_handler(request):
 # Launch the App
 @alexa.request("LaunchRequest")
 def launch_request_handler(request):
-	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code."
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app."
 	return alexa.create_response(message=alexa_response_str)
 
 # End the session
@@ -44,26 +44,31 @@ def session_ended_request_handler(request):
 
 ###### INTENTS ######
 
+# Verifies users pin code
 @alexa.intent('PinCodeIntent')
 def pin_code_confirm_intent_hander(request):
 	pin = request.slots['pin_code']
+
+	# verify user by querying database using pin
 	username = quizlet.verify_user(pin)
 
+	# add username to session, welcome the user
 	if username != None:
 		request.session['username'] = username
 		request.session['pin_code_verified'] = True
 		alexa_response_str = "Welcome to Flashcard Helper {}".format(username)
 		return alexa.create_response(message=alexa_response_str)
 
+	# speak out the digits so the user can hear what the input was
 	else:
-		alexa_response_str = "The pin I heard was {} and I couldn't find a username. Please try again.".format(pin)
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "<speak> The pin I heard was <say-as interpret-as='digits'> {} </say-as> and I couldn't find a username associated with that pin. Please try again. </speak>".format(pin)
+		return alexa.create_response(message=alexa_response_str, is_ssml=True)
 
 # List all the sets you own and can study from
 @alexa.intent("ListAllSetsIntent")
 def list_all_sets_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 
 	# get all of the sets
@@ -80,7 +85,7 @@ def list_all_sets_intent_handler(request):
 
 	# prepare response string
 	all_sets_string = ", ".join(all_sets_titles)
-	alexa_response_str = "Here are the sets you can choose from: {}".format(all_sets_string)
+	alexa_response_str = "Here are the sets you can choose from: {}. Let me know which one you want to work with.".format(all_sets_string)
 
 	# return message to user
 	return alexa.create_response(message=alexa_response_str)
@@ -89,7 +94,7 @@ def list_all_sets_intent_handler(request):
 @alexa.intent("ReviewWrongAnswersIntent")
 def review_all_wrong_answers_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 		
 	if request.session['incorrect_terms'] != []:
@@ -107,7 +112,7 @@ def review_all_wrong_answers_intent_handler(request):
 @alexa.intent("StartStudySessionIntent")
 def start_study_session_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 
 	user_id = request.session['username']
@@ -159,7 +164,7 @@ def start_study_session_intent_handler(request):
 @alexa.intent("EndStudySessionIntent")
 def end_study_session_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 		
 	total_percent_correct = int((float(request.session['correct_count']) / request.session['total_terms']) * 100)
@@ -174,7 +179,7 @@ def end_study_session_intent_handler(request):
 @alexa.intent("ConfirmationIntent")
 def confirmation_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 		
 	# store that the session has been started
@@ -250,7 +255,7 @@ The answer to questions needs to be preceded by "the answer is ..." or the "the 
 @alexa.intent('AnswerIntent')
 def answer_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
 		return alexa.create_response(message=alexa_response_str)
 		
 	# makes sure a study session has started and user is not reviewing his/her wrong answers

@@ -5,6 +5,9 @@ keys/*
 !keys/README
 *.zip
 keys.py
+config.py
+setup.py
+setup.cfg
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
