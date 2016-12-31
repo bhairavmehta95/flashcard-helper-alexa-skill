@@ -117,4 +117,4 @@ if __name__ == '__main__':
 
 	# all_sets_string = ", ".join(all_sets_titles)
 	# print("Here are the sets you can choose from: {}".format(all_sets_string))
-	print verify_user(57860)
+	print(verify_user(57860))

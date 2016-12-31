@@ -175,6 +175,28 @@ def end_study_session_intent_handler(request):
 				
 	return alexa.create_response(message=alexa_response_str,end_session=True)
 
+@alexa.intent("HelpIntent")
+def help_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Make sure you visit the website listed in the application in order to link your account. Then, repeat the pin number back to me and we can get started." 	
+		return alexa.create_response(message=alexa_response_str)
+	else:
+		alexa_response_str = "Here are some things you can ask me after the pin confirmation. The Alexa app is the best way to view my full command set, but to start, you can ask me to \
+						list your flashcard sets, help you study a specific set, or help review your incorrect answers. Hope that helps!"
+		return alexa.create_response(message=alexa_response_str)
+
+
+# Used to decline confirmation of the set repeated back to the user
+@alexa.intent("DeclinationIntent")
+def declination_intent_handler(request):
+	if request.session.get('pin_code_verified') != True:
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
+		return alexa.create_response(message=alexa_response_str)
+
+	alexa_response_str = "Okay, please ask me again."
+	return alexa.create_response(message=alexa_response_str)
+
+
 # Confirms that this is the set the user wanted to study
 @alexa.intent("ConfirmationIntent")
 def confirmation_intent_handler(request):
@@ -398,6 +420,11 @@ def answer_intent_handler(request):
 
 			alexa_response_str = "Oops, still not right. We'll come back to that. Now, can you define {}?".format(request.session['incorrect_terms'][incorrect_index][1])			
 			return alexa.create_response(message=alexa_response_str)
+
+
+		## Error:
+		alexa_response_str = "Oops, could you repeat that?"
+		return alexa.create_response(message=alexa_response_str)
 
 ###### END INTENTS ######			
 
