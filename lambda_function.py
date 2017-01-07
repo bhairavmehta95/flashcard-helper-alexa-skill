@@ -1,6 +1,6 @@
 """
 Bhairav Mehta - Alexa Hack the Dorm Competition
-Decemeber 2016
+Decemeber 2016 / January 2017
 
 Alexa Abstractions based off a library developed by Anjishu Kumar
 """
@@ -20,7 +20,7 @@ def lambda_handler(request_obj, context=None):
 # Default Handler
 @alexa.default
 def default_handler(request):
-	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app."
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app. Start by saying 'my pin is', followed by your unique pin number on the website."
 	return alexa.create_response(message=alexa_response_str)
 
 ###### END HANDLERS ######
@@ -30,13 +30,13 @@ def default_handler(request):
 # Launch the App
 @alexa.request("LaunchRequest")
 def launch_request_handler(request):
-	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app."
+	alexa_response_str = "Welcome! Let's start studying! Please give me your pin code, found on the link listed in the Alexa app. Start by saying 'my pin is', followed by your unique pin number on the website."
 	return alexa.create_response(message=alexa_response_str)
 
 # End the session
 @alexa.request("SessionEndedRequest")
 def session_ended_request_handler(request):
-	alexa_response_str = "Goodbye!"
+	alexa_response_str = "Goodbye, and thanks for using Flashcard Helper!"
 	return alexa.create_response(message=alexa_response_str, end_session=True)
 
 ###### END REQUESTS ######
@@ -47,7 +47,19 @@ def session_ended_request_handler(request):
 # Verifies users pin code
 @alexa.intent('PinCodeIntent')
 def pin_code_confirm_intent_hander(request):
-	pin = request.slots['pin_code']
+
+	pin = None
+	
+	### error checking ###
+
+	try:
+		pin = request.slots['pin_code']
+	except:
+		alexa_response_str = "I couldn't find a username associated with that pin. Please try again."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
+
+	### end error checking ###
 
 	# verify user by querying database using pin
 	username = quizlet.verify_user(pin)
@@ -56,20 +68,22 @@ def pin_code_confirm_intent_hander(request):
 	if username != None:
 		request.session['username'] = username
 		request.session['pin_code_verified'] = True
-		alexa_response_str = "Welcome to Flashcard Helper {}".format(username)
+		alexa_response_str = "Welcome to Flashcard Helper {}. You can ask me a bunch of things, like: 'List my sets', or 'Please help'. To get started with studying, say, 'study', \
+			followed by your set name from quizlet.com. For example, \
+			to study your Quizlet set named History, you can say 'let's study history'. What would you like to do?".format(username)
 		return alexa.create_response(message=alexa_response_str)
 
 	# speak out the digits so the user can hear what the input was
 	else:
 		alexa_response_str = "<speak> The pin I heard was <say-as interpret-as='digits'> {} </say-as> and I couldn't find a username associated with that pin. Please try again. </speak>".format(pin)
-		return alexa.create_response(message=alexa_response_str, is_ssml=True)
+		return alexa.create_response(message=alexa_response_str, is_ssml=True, end_session=True)
 
 # List all the sets you own and can study from
 @alexa.intent("ListAllSetsIntent")
 def list_all_sets_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
 
 	# get all of the sets
 	user_id = request.session['username']
@@ -83,37 +97,88 @@ def list_all_sets_intent_handler(request):
 	for set_ in sets:
 		all_sets_titles.append(set_['title'])
 
+	# user has no sets
+	if all_sets_titles == []:
+		alexa_response_str = "Oops, it looks like you don't have any sets. Please visit quizlet.com to create a flashcard set, and then I will be more than happy to help! Goodbye, \
+			and I hope to speak to you again soon!"
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
 	# prepare response string
 	all_sets_string = ", ".join(all_sets_titles)
-	alexa_response_str = "Here are the sets you can choose from: {}. Let me know which one you want to work with.".format(all_sets_string)
+	alexa_response_str = "Here are the sets you can choose from: {}. Which set would you like to work with? Start by saying, let's study, followed by the set you want to choose.".format(all_sets_string)
 
 	# return message to user
 	return alexa.create_response(message=alexa_response_str)
+
+# Exiting the application
+@alexa.intent("EndSessionIntent")
+def end_session_intent(request):
+	alexa_response_str = "Goodbye, and thanks for using Flashcard Helper!"
+	return alexa.create_response(message=alexa_response_str, end_session=True)	
 
 # Review all of the wrong answers a user had during a session
 @alexa.intent("ReviewWrongAnswersIntent")
 def review_all_wrong_answers_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
 		
-	if request.session['incorrect_terms'] != []:
-		request.session['reviewing_wrong'] = True
-		request.session['reviewing_index'] = 0
-		alexa_response_str = "Sure, we can definitely review your most troublesome words. Let's start with {}.".format(request.session['incorrect_terms'][0][1])
+	if request.session.get('study_session_started') == True:
+		if request.session['incorrect_terms'] != []:
+			request.session['reviewing_wrong'] = True
+			request.session['reviewing_index'] = 0
+			alexa_response_str = "Sure, we can definitely review your most troublesome words. To start, please define {}.".format(request.session['incorrect_terms'][0][1])
+			return alexa.create_response(message=alexa_response_str)
+
+		else:
+			index = request.session['current_index']
+			alexa_response_str = "Lucky for you, you didn't get anything wrong! Now, please define {}.".format(request.session['all_terms'][index]['term'])
+			return alexa.create_response(message=alexa_response_str)
+
+	# user hasn't started a study session
+	else:
+		# get all of the sets
+		user_id = request.session['username']
+		sets = quizlet.get_all_sets_from_user(user_id)
+		all_sets_titles = []
+
+		set_id = None
+		set_title = None
+
+		# add each title to the list
+		for set_ in sets:
+			all_sets_titles.append(set_['title'])
+
+		# user has no sets
+		if all_sets_titles == []:
+			alexa_response_str = "Oops. You haven't started a study session, and it looks like you don't have any sets. Please visit quizlet.com to create a flashcard set, and then I will be more than happy to help! Goodbye, \
+				and I hope to speak to you again soon!"
+			return alexa.create_response(message=alexa_response_str, end_session=True)
+
+		# prepare response string
+		all_sets_string = ", ".join(all_sets_titles)
+		alexa_response_str = "Uh oh, you haven't started a study session. Here are the sets you can choose from: {}. Which set would you like to work with? Start by saying, let's study, followed by the set you want to choose.".format(all_sets_string)
+
+		# return message to user
 		return alexa.create_response(message=alexa_response_str)
 
-	else:
-		index = request.session['current_index']
-		alexa_response_str = "Lucky for you, you didn't get anything wrong! Now, please define {}.".format(request.session['all_terms'][index]['term'])
-		return alexa.create_response(message=alexa_response_str)
 
 # Starts a study session when given a set title
 @alexa.intent("StartStudySessionIntent")
 def start_study_session_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
+	### error checking ###
+
+	# grabs the title of the set from the slot
+	try:
+		title = request.slots["title"]
+	except:
+		title = None
+
+	### end error checking ###
 
 	user_id = request.session['username']
 
@@ -131,8 +196,6 @@ def start_study_session_intent_handler(request):
 	sets = quizlet.get_all_sets_from_user(user_id)
 	all_sets_titles = []
 	
-	# grabs the title of the set from the slot
-	title = request.slots["title"]
 
 	# variables to store API call variables
 	set_id = None
@@ -148,10 +211,17 @@ def start_study_session_intent_handler(request):
 			break
 
 	# returns all of the options the user can choose from
-	if set_id == None:
+	if set_id == None and all_sets_titles != []:
 		all_sets_string = ", ".join(all_sets_titles)
-		alexa_response_str = "Oops! Couldn't find that set. Here are the sets you can choose from: {}.".format(all_sets_string)
+		alexa_response_str = "Oops! Couldn't find that set. Here are the sets you can choose from: {}. Which set would you like to work with? Start by saying, let's study, followed by the set you want to choose.".format(all_sets_string)
 		return alexa.create_response(message=alexa_response_str)
+
+	# the user has no sets 
+	elif set_id == None and all_sets_titles == []:
+		alexa_response_str = "Oops, it looks like you don't have any sets. Please visit quizlet.com to create a flashcard set, and then I will be more than happy to help! Goodbye, \
+			and I hope to speak to you again soon!"
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
 
 	# found the set, looks for user confirmation
 	else:
@@ -164,25 +234,40 @@ def start_study_session_intent_handler(request):
 @alexa.intent("EndStudySessionIntent")
 def end_study_session_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
-		
-	total_percent_correct = int((float(request.session['correct_count']) / request.session['total_terms']) * 100)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+	
+	# study session had been started
+	try:
+		total_percent_correct = int((float(request.session['correct_count']) / request.session['total_terms']) * 100)
 
-	alexa_response_str = "I am sorry you want to leave. During this session, you got {} correct and {} incorrect out of {} \
-				total terms. You got {} percent correct. Goodbye, and hopefully we speak again soon!".format(request.session['correct_count'], \
-				request.session['incorrect_count'], request.session['total_terms'], total_percent_correct)
-				
-	return alexa.create_response(message=alexa_response_str,end_session=True)
+		alexa_response_str = "I am sorry you want to leave. During this session, you got {} correct and {} incorrect out of {} \
+					total terms. You got {} percent correct. Goodbye, and hopefully we speak again soon!".format(request.session['correct_count'], \
+					request.session['incorrect_count'], request.session['total_terms'], total_percent_correct)
+					
+		return alexa.create_response(message=alexa_response_str,end_session=True)
+	
+	# any error (i.e no session was started)
+	except:
+		alexa_response_str = "Goodbye, and thank you for using Flashcard Helper!"
+		return alexa.create_response(message=alexa_response_str, end_session=True)
 
 @alexa.intent("HelpIntent")
 def help_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Make sure you visit the website listed in the application in order to link your account. Then, repeat the pin number back to me and we can get started." 	
+		alexa_response_str = "Make sure you visit the website listed in the Alexa app in order to link your account. Then, say 'my pin is', followed by your unique pin number on the website to get started." 	
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
+	elif request.session.get('study_session_started') == True:
+		index = request.session['current_index']
+		word_to_define = request.session['all_terms'][index]['term']
+		alexa_response_str = "To answer a question, start with 'the answer is', followed by the definition of the flashcard. Or, if you want to review some incorrect terms, say, 'help me review my incorrect terms'. \
+			Now, back to the study session. Can you please define {}?".format(word_to_define)
 		return alexa.create_response(message=alexa_response_str)
+
 	else:
 		alexa_response_str = "Here are some things you can ask me after the pin confirmation. The Alexa app is the best way to view my full command set, but to start, you can ask me to \
-						list your flashcard sets, help you study a specific set, or help review your incorrect answers. Hope that helps!"
+						list your flashcard sets, help you study a specific set, or help review your incorrect answers. What would you like to do?"
 		return alexa.create_response(message=alexa_response_str)
 
 
@@ -190,10 +275,10 @@ def help_intent_handler(request):
 @alexa.intent("DeclinationIntent")
 def declination_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
 
-	alexa_response_str = "Okay, please ask me again."
+	alexa_response_str = "Okay, we will not study that set. What would you like to do?"
 	return alexa.create_response(message=alexa_response_str)
 
 
@@ -201,8 +286,8 @@ def declination_intent_handler(request):
 @alexa.intent("ConfirmationIntent")
 def confirmation_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
-		return alexa.create_response(message=alexa_response_str)
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
 		
 	# store that the session has been started
 	request.session['study_session_started'] = True
@@ -277,14 +362,54 @@ The answer to questions needs to be preceded by "the answer is ..." or the "the 
 @alexa.intent('AnswerIntent')
 def answer_intent_handler(request):
 	if request.session.get('pin_code_verified') != True:
-		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app."
+		alexa_response_str = "Please verify your pin first, using the link listed in the Alexa app. Start by saying, 'my pin is', followed by your unique pin number on the website."
+		return alexa.create_response(message=alexa_response_str, end_session=True)
+
+	# TODO: Make so that it does not need to match exactly	
+	answer = request.slots.get("answer")
+
+	### error checking ### 
+
+	# has a session been started yet, and was an answer given?
+	if request.session.get('study_session_started') == True:
+		if answer == None:
+			index = request.session['current_index']
+			word_to_define = request.session['all_terms'][index]['term']
+			alexa_response_str = "Uh oh. I didn't quite get your answer. Make sure you start with 'The answer is', and then proceed to give your answer. Let's try again. \
+				Can you please define {}?".format(word_to_define)
+			return alexa.create_response(message=alexa_response_str)
+
+	# study session hasn't been started yet
+	else:
+		# get all of the sets
+		user_id = request.session['username']
+		sets = quizlet.get_all_sets_from_user(user_id)
+		all_sets_titles = []
+
+		set_id = None
+		set_title = None
+
+		# add each title to the list
+		for set_ in sets:
+			all_sets_titles.append(set_['title'])
+
+		# user has no sets
+		if all_sets_titles == []:
+			alexa_response_str = "Oops. You haven't started a study session, and it looks like you don't have any sets. Please visit quizlet.com to create a flashcard set, and then I will be more than happy to help! Goodbye, \
+				and I hope to speak to you again soon!"
+			return alexa.create_response(message=alexa_response_str, end_session=True)
+
+		# prepare response string
+		all_sets_string = ", ".join(all_sets_titles)
+		alexa_response_str = "Uh oh, you haven't started a study session. Here are the sets you can choose from: {}. Which set would you like to work with? Start by saying, let's study, followed by the set you want to choose.".format(all_sets_string)
+
+		# return message to user
 		return alexa.create_response(message=alexa_response_str)
+
+	### end error checking ###
 		
 	# makes sure a study session has started and user is not reviewing his/her wrong answers
-	if request.session['study_session_started'] and not request.session['reviewing_wrong']:
-
-		# TODO: Make so that it does not need to match exactly
-		answer = request.slots["answer"]
+	if request.session['reviewing_wrong'] == False:
 
 		index = request.session['current_index']
 		total_terms = request.session['total_terms']
@@ -310,8 +435,8 @@ def answer_intent_handler(request):
 				
 
 				alexa_response_str = "Good job, you got that one right! Thanks for finishing! You got {} correct and {} incorrect out of {} \
-				total terms. You got {} percent correct, and you might want to study up on {}. Let me know if you want to brush up on your \
-				troublesome terms, or end the session for now!".format(request.session['correct_count'], \
+				total terms. You got {} percent correct, and you might want to study up on {}. Would you like to go over your incorrect answers, \
+				or end the study session?".format(request.session['correct_count'], \
 				request.session['incorrect_count'], total_terms, total_percent_correct, incorrect_terms_string)
 				
 				return alexa.create_response(message=alexa_response_str)
@@ -350,8 +475,8 @@ def answer_intent_handler(request):
 				incorrect_terms_string = ", ".join(request.session['incorrect_terms'])
 
 				alexa_response_str = "Uh Oh, you got that one wrong! Thanks for finishing! You got {} correct and {} \
-				incorrect out of {} total terms. You got {} percent correct, and you might want to study up on {}. Let me know if you want to brush up on your \
-				troublesome terms, or end the session for now!" \
+				incorrect out of {} total terms. You got {} percent correct, and you might want to study up on {}. Would you like to go over your incorrect answers, \
+				or end the study session?" \
 				.format(request.session['correct_count'], request.session['incorrect_count'], total_terms, total_percent_correct, incorrect_terms_string)
 				
 				return alexa.create_response(message=alexa_response_str)
@@ -377,7 +502,7 @@ def answer_intent_handler(request):
 				return alexa.create_response(message=alexa_response_str)
 
 	# study session was started, but user is reviewing their wrong answers
-	elif request.session['study_session_started'] and request.session['reviewing_wrong']:
+	elif request.session.get('reviewing_wrong') == True:
 
 		# index of the tuple (index, term) for the word in "incorrect terms" list
 		incorrect_index = request.session['reviewing_index']
