@@ -472,7 +472,8 @@ def answer_intent_handler(request):
 				total_percent_correct = int((float(request.session['correct_count']) / total_terms) * 100)
 				
 				# loads all of the incorrect terms into a string
-				incorrect_terms_string = ", ".join(request.session['incorrect_terms'])
+				incorrect_terms_list = [x[1] for x in request.session['incorrect_terms']]
+				incorrect_terms_string = ", ".join(incorrect_terms_list)
 
 				alexa_response_str = "Uh Oh, you got that one wrong! Thanks for finishing! You got {} correct and {} \
 				incorrect out of {} total terms. You got {} percent correct, and you might want to study up on {}. Would you like to go over your incorrect answers, \
