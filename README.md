@@ -1,6 +1,6 @@
 # Flashcard Helper: An Alexa Skill
 
-## Currently, this repo's website is under connstruction.
+## Currently, this repo's website is under construction.
 
 Flashcard Helper is an Alexa Skill that utilizes the ask-pykit library and the Alexa Skills Kit to give users an easy way to study flashcards. By connecting the skill to the Quizlet service, users can study any set of flashcards that they have uploaded or made on the website.
 
